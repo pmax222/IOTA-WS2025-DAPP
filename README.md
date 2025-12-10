@@ -4,6 +4,7 @@
 
 [ADDRESS_TESTNET](https://explorer.iota.org/address/0x785ecb17d7f625e3835dfbc5104e2c5dbc94a86edcb5565c12eb0ae84d0ec61d?network=testnet)
 
+![Alt Text](https://github.com/pmax222/IOTA-WS2025-DAPP/blob/main/Screenshot%202025-12-10%20201557.png "explorer.iota")
 
 Based on the `Anti_Theft_GPS_Tracker` smart contract and the frontend application we have built, here is a complete, professional **README.md** file in English.
 
@@ -136,3 +137,4 @@ IOTA-WS2025-DAPP/
 ## 📜 License
 
 This project is licensed under the MIT License.
+
