@@ -1,286 +1,311 @@
 #[test_only]
 module anti_theft_gps_tracker::anti_theft_gps_tracker_tests {
-    use anti_theft_gps_tracker::anti_theft_gps_tracker;
+    use anti_theft_gps_tracker::anti_theft_gps_tracker::{Self, GPSDevice, TrackedAsset, Registry};
     use iota::test_scenario;
-    use iota::transfer;
     use std::string;
 
     #[test]
     fun test_create_device() {
-        let mut scenario = test_scenario::begin(@0x1);
-        let ctx = test_scenario::ctx(&mut scenario);
+        let user = @0x1;
+        let mut scenario = test_scenario::begin(user);
         
-        let mut registry = anti_theft_gps_tracker::Registry {
-            id: iota::object::new(ctx),
-            total_devices: 0,
-            total_assets: 0,
+        // 1. Khởi tạo hệ thống
+        {
+            let ctx = test_scenario::ctx(&mut scenario);
+            anti_theft_gps_tracker::init_for_testing(ctx);
         };
 
-        let device = anti_theft_gps_tracker::create_device(
-            string::utf8(b"GPS Device 1"),
-            1000,
-            &mut registry,
-            ctx,
-        );
+        // 2. Tạo thiết bị (user gọi hàm)
+        test_scenario::next_tx(&mut scenario, user);
+        {
+            let mut registry = test_scenario::take_shared<Registry>(&scenario);
+            let ctx = test_scenario::ctx(&mut scenario);
+            
+            anti_theft_gps_tracker::create_device(
+                string::utf8(b"GPS Device 1"),
+                1000,
+                &mut registry,
+                ctx
+            );
+            test_scenario::return_shared(registry);
+        };
 
-        assert!(anti_theft_gps_tracker::is_device_active(&device), 0);
-        assert!(anti_theft_gps_tracker::device_name(&device) == string::utf8(b"GPS Device 1"), 1);
+        // 3. Kiểm tra thiết bị đã được chuyển về cho user chưa
+        test_scenario::next_tx(&mut scenario, user);
+        {
+            let device = test_scenario::take_from_sender<GPSDevice>(&scenario);
+            assert!(anti_theft_gps_tracker::is_device_active(&device), 0);
+            assert!(anti_theft_gps_tracker::device_name(&device) == string::utf8(b"GPS Device 1"), 1);
+            test_scenario::return_to_sender(&scenario, device);
+        };
 
-        let sender = iota::tx_context::sender(ctx);
-        transfer::transfer(device, sender);
-        transfer::transfer(registry, sender);
         test_scenario::end(scenario);
     }
 
     #[test]
     fun test_register_asset() {
-        let mut scenario = test_scenario::begin(@0x1);
-        let ctx = test_scenario::ctx(&mut scenario);
+        let user = @0x1;
+        let mut scenario = test_scenario::begin(user);
         
-        let mut registry = anti_theft_gps_tracker::Registry {
-            id: iota::object::new(ctx),
-            total_devices: 0,
-            total_assets: 0,
+        // Init
+        {
+            let ctx = test_scenario::ctx(&mut scenario);
+            anti_theft_gps_tracker::init_for_testing(ctx);
         };
 
-        let device = anti_theft_gps_tracker::create_device(
-            string::utf8(b"GPS Device"),
-            1000,
-            &mut registry,
-            ctx,
-        );
+        // Create Device
+        test_scenario::next_tx(&mut scenario, user);
+        {
+            let mut registry = test_scenario::take_shared<Registry>(&scenario);
+            let ctx = test_scenario::ctx(&mut scenario);
+            anti_theft_gps_tracker::create_device(
+                string::utf8(b"GPS Device"), 1000, &mut registry, ctx
+            );
+            test_scenario::return_shared(registry);
+        };
 
-        let asset = anti_theft_gps_tracker::register_asset(
-            string::utf8(b"My Car"),
-            string::utf8(b"Red sedan, license ABC123"),
-            &device,
-            &mut registry,
-            ctx,
-        );
+        // Register Asset
+        test_scenario::next_tx(&mut scenario, user);
+        {
+            let device = test_scenario::take_from_sender<GPSDevice>(&scenario);
+            let mut registry = test_scenario::take_shared<Registry>(&scenario);
+            let ctx = test_scenario::ctx(&mut scenario);
 
-        assert!(!anti_theft_gps_tracker::is_asset_stolen(&asset), 0);
-        assert!(anti_theft_gps_tracker::asset_name(&asset) == string::utf8(b"My Car"), 1);
+            anti_theft_gps_tracker::register_asset(
+                string::utf8(b"My Car"),
+                string::utf8(b"Red sedan"),
+                &device,
+                &mut registry,
+                ctx
+            );
+            
+            test_scenario::return_shared(registry);
+            test_scenario::return_to_sender(&scenario, device);
+        };
 
-        let sender = iota::tx_context::sender(ctx);
-        transfer::transfer(device, sender);
-        transfer::transfer(asset, sender);
-        transfer::transfer(registry, sender);
+        // Verify Asset
+        test_scenario::next_tx(&mut scenario, user);
+        {
+            let asset = test_scenario::take_from_sender<TrackedAsset>(&scenario);
+            assert!(!anti_theft_gps_tracker::is_asset_stolen(&asset), 0);
+            assert!(anti_theft_gps_tracker::asset_name(&asset) == string::utf8(b"My Car"), 1);
+            test_scenario::return_to_sender(&scenario, asset);
+        };
+
         test_scenario::end(scenario);
     }
 
     #[test]
     fun test_update_location() {
-        let mut scenario = test_scenario::begin(@0x1);
-        let ctx = test_scenario::ctx(&mut scenario);
+        let user = @0x1;
+        let mut scenario = test_scenario::begin(user);
         
-        let mut registry = anti_theft_gps_tracker::Registry {
-            id: iota::object::new(ctx),
-            total_devices: 0,
-            total_assets: 0,
+        {
+            let ctx = test_scenario::ctx(&mut scenario);
+            anti_theft_gps_tracker::init_for_testing(ctx);
         };
 
-        let mut device = anti_theft_gps_tracker::create_device(
-            string::utf8(b"GPS Device"),
-            1000,
-            &mut registry,
-            ctx,
-        );
+        test_scenario::next_tx(&mut scenario, user);
+        {
+            let mut registry = test_scenario::take_shared<Registry>(&scenario);
+            let ctx = test_scenario::ctx(&mut scenario);
+            anti_theft_gps_tracker::create_device(string::utf8(b"GPS"), 1000, &mut registry, ctx);
+            test_scenario::return_shared(registry);
+        };
 
-        anti_theft_gps_tracker::update_location(&mut device, 4000, 5000, ctx);
+        test_scenario::next_tx(&mut scenario, user);
+        {
+            let mut device = test_scenario::take_from_sender<GPSDevice>(&scenario);
+            let ctx = test_scenario::ctx(&mut scenario);
+            
+            anti_theft_gps_tracker::update_location(&mut device, 4000, 5000, ctx);
+            
+            let (lat, long) = anti_theft_gps_tracker::device_location(&device);
+            assert!(lat == 4000, 0);
+            assert!(long == 5000, 1);
+            
+            test_scenario::return_to_sender(&scenario, device);
+        };
 
-        let (latitude, longitude) = anti_theft_gps_tracker::device_location(&device);
-        assert!(latitude == 4000, 0);
-        assert!(longitude == 5000, 1);
-
-        let sender = iota::tx_context::sender(ctx);
-        transfer::transfer(device, sender);
-        transfer::transfer(registry, sender);
         test_scenario::end(scenario);
     }
 
     #[test]
     fun test_report_theft() {
-        let mut scenario = test_scenario::begin(@0x1);
-        let ctx = test_scenario::ctx(&mut scenario);
+        let user = @0x1;
+        let mut scenario = test_scenario::begin(user);
         
-        let mut registry = anti_theft_gps_tracker::Registry {
-            id: iota::object::new(ctx),
-            total_devices: 0,
-            total_assets: 0,
+        {
+            let ctx = test_scenario::ctx(&mut scenario);
+            anti_theft_gps_tracker::init_for_testing(ctx);
         };
 
-        let device = anti_theft_gps_tracker::create_device(
-            string::utf8(b"GPS Device"),
-            1000,
-            &mut registry,
-            ctx,
-        );
+        // Create Device & Asset
+        test_scenario::next_tx(&mut scenario, user);
+        {
+            let mut registry = test_scenario::take_shared<Registry>(&scenario);
+            let ctx = test_scenario::ctx(&mut scenario);
+            anti_theft_gps_tracker::create_device(string::utf8(b"GPS"), 1000, &mut registry, ctx);
+            test_scenario::return_shared(registry);
+        };
 
-        let mut asset = anti_theft_gps_tracker::register_asset(
-            string::utf8(b"My Bike"),
-            string::utf8(b"Mountain bike"),
-            &device,
-            &mut registry,
-            ctx,
-        );
+        test_scenario::next_tx(&mut scenario, user);
+        {
+            let device = test_scenario::take_from_sender<GPSDevice>(&scenario);
+            let mut registry = test_scenario::take_shared<Registry>(&scenario);
+            let ctx = test_scenario::ctx(&mut scenario);
+            anti_theft_gps_tracker::register_asset(
+                string::utf8(b"Bike"), string::utf8(b"Desc"), &device, &mut registry, ctx
+            );
+            test_scenario::return_shared(registry);
+            test_scenario::return_to_sender(&scenario, device);
+        };
 
-        assert!(!anti_theft_gps_tracker::is_asset_stolen(&asset), 0);
+        // Report Theft
+        test_scenario::next_tx(&mut scenario, user);
+        {
+            let device = test_scenario::take_from_sender<GPSDevice>(&scenario);
+            let mut asset = test_scenario::take_from_sender<TrackedAsset>(&scenario);
+            let ctx = test_scenario::ctx(&mut scenario);
 
-        anti_theft_gps_tracker::report_theft(&mut asset, &device, ctx);
+            anti_theft_gps_tracker::report_theft(&mut asset, &device, ctx);
+            assert!(anti_theft_gps_tracker::is_asset_stolen(&asset), 1);
 
-        assert!(anti_theft_gps_tracker::is_asset_stolen(&asset), 1);
+            test_scenario::return_to_sender(&scenario, device);
+            test_scenario::return_to_sender(&scenario, asset);
+        };
 
-        let sender = iota::tx_context::sender(ctx);
-        transfer::transfer(device, sender);
-        transfer::transfer(asset, sender);
-        transfer::transfer(registry, sender);
         test_scenario::end(scenario);
     }
 
     #[test]
     fun test_recover_asset() {
-        let mut scenario = test_scenario::begin(@0x1);
-        let ctx = test_scenario::ctx(&mut scenario);
+        let user = @0x1;
+        let mut scenario = test_scenario::begin(user);
         
-        let mut registry = anti_theft_gps_tracker::Registry {
-            id: iota::object::new(ctx),
-            total_devices: 0,
-            total_assets: 0,
+        {
+            let ctx = test_scenario::ctx(&mut scenario);
+            anti_theft_gps_tracker::init_for_testing(ctx);
         };
 
-        let device = anti_theft_gps_tracker::create_device(
-            string::utf8(b"GPS Device"),
-            1000,
-            &mut registry,
-            ctx,
-        );
+        test_scenario::next_tx(&mut scenario, user);
+        {
+            let mut registry = test_scenario::take_shared<Registry>(&scenario);
+            let ctx = test_scenario::ctx(&mut scenario);
+            anti_theft_gps_tracker::create_device(string::utf8(b"GPS"), 1000, &mut registry, ctx);
+            test_scenario::return_shared(registry);
+        };
 
-        let mut asset = anti_theft_gps_tracker::register_asset(
-            string::utf8(b"My Laptop"),
-            string::utf8(b"MacBook Pro 16"),
-            &device,
-            &mut registry,
-            ctx,
-        );
+        test_scenario::next_tx(&mut scenario, user);
+        {
+            let device = test_scenario::take_from_sender<GPSDevice>(&scenario);
+            let mut registry = test_scenario::take_shared<Registry>(&scenario);
+            let ctx = test_scenario::ctx(&mut scenario);
+            anti_theft_gps_tracker::register_asset(
+                string::utf8(b"Laptop"), string::utf8(b"Mac"), &device, &mut registry, ctx
+            );
+            test_scenario::return_shared(registry);
+            test_scenario::return_to_sender(&scenario, device);
+        };
 
-        anti_theft_gps_tracker::report_theft(&mut asset, &device, ctx);
-        assert!(anti_theft_gps_tracker::is_asset_stolen(&asset), 0);
+        test_scenario::next_tx(&mut scenario, user);
+        {
+            let device = test_scenario::take_from_sender<GPSDevice>(&scenario);
+            let mut asset = test_scenario::take_from_sender<TrackedAsset>(&scenario);
+            let ctx = test_scenario::ctx(&mut scenario);
 
-        anti_theft_gps_tracker::recover_asset(&mut asset, ctx);
-        assert!(!anti_theft_gps_tracker::is_asset_stolen(&asset), 1);
+            anti_theft_gps_tracker::report_theft(&mut asset, &device, ctx);
+            anti_theft_gps_tracker::recover_asset(&mut asset, ctx);
+            assert!(!anti_theft_gps_tracker::is_asset_stolen(&asset), 1);
 
-        let sender = iota::tx_context::sender(ctx);
-        transfer::transfer(device, sender);
-        transfer::transfer(asset, sender);
-        transfer::transfer(registry, sender);
+            test_scenario::return_to_sender(&scenario, device);
+            test_scenario::return_to_sender(&scenario, asset);
+        };
+
         test_scenario::end(scenario);
     }
 
     #[test]
     fun test_deactivate_and_activate_device() {
-        let mut scenario = test_scenario::begin(@0x1);
-        let ctx = test_scenario::ctx(&mut scenario);
+        let user = @0x1;
+        let mut scenario = test_scenario::begin(user);
         
-        let mut registry = anti_theft_gps_tracker::Registry {
-            id: iota::object::new(ctx),
-            total_devices: 0,
-            total_assets: 0,
+        {
+            let ctx = test_scenario::ctx(&mut scenario);
+            anti_theft_gps_tracker::init_for_testing(ctx);
         };
 
-        let mut device = anti_theft_gps_tracker::create_device(
-            string::utf8(b"GPS Device"),
-            1000,
-            &mut registry,
-            ctx,
-        );
+        test_scenario::next_tx(&mut scenario, user);
+        {
+            let mut registry = test_scenario::take_shared<Registry>(&scenario);
+            let ctx = test_scenario::ctx(&mut scenario);
+            anti_theft_gps_tracker::create_device(string::utf8(b"GPS"), 1000, &mut registry, ctx);
+            test_scenario::return_shared(registry);
+        };
 
-        assert!(anti_theft_gps_tracker::is_device_active(&device), 0);
+        test_scenario::next_tx(&mut scenario, user);
+        {
+            let mut device = test_scenario::take_from_sender<GPSDevice>(&scenario);
+            let ctx = test_scenario::ctx(&mut scenario);
 
-        anti_theft_gps_tracker::deactivate_device(&mut device, ctx);
-        assert!(!anti_theft_gps_tracker::is_device_active(&device), 1);
+            anti_theft_gps_tracker::deactivate_device(&mut device, ctx);
+            assert!(!anti_theft_gps_tracker::is_device_active(&device), 1);
 
-        anti_theft_gps_tracker::activate_device(&mut device, ctx);
-        assert!(anti_theft_gps_tracker::is_device_active(&device), 2);
+            anti_theft_gps_tracker::activate_device(&mut device, ctx);
+            assert!(anti_theft_gps_tracker::is_device_active(&device), 2);
 
-        let sender = iota::tx_context::sender(ctx);
-        transfer::transfer(device, sender);
-        transfer::transfer(registry, sender);
+            test_scenario::return_to_sender(&scenario, device);
+        };
+
         test_scenario::end(scenario);
     }
 
     #[test]
     #[expected_failure(abort_code = anti_theft_gps_tracker::UNAUTHORIZED)]
     fun test_unauthorized_register_asset() {
-        let mut scenario = test_scenario::begin(@0x1);
-        let ctx = test_scenario::ctx(&mut scenario);
+        let user = @0x1;
+        let attacker = @0x2;
+        let mut scenario = test_scenario::begin(user);
         
-        let mut registry = anti_theft_gps_tracker::Registry {
-            id: iota::object::new(ctx),
-            total_devices: 0,
-            total_assets: 0,
+        // 1. Khởi tạo
+        {
+            let ctx = test_scenario::ctx(&mut scenario);
+            anti_theft_gps_tracker::init_for_testing(ctx);
         };
 
-        let device = anti_theft_gps_tracker::create_device(
-            string::utf8(b"GPS Device"),
-            1000,
-            &mut registry,
-            ctx,
-        );
-
-        test_scenario::next_tx(&mut scenario, @0x2);
-        let ctx = test_scenario::ctx(&mut scenario);
-
-        // This should fail because @0x2 is not the device owner
-        let _asset = anti_theft_gps_tracker::register_asset(
-            string::utf8(b"Someone Else's Car"),
-            string::utf8(b"Stolen asset"),
-            &device,
-            &mut registry,
-            ctx,
-        );
-        let _ = _asset;
-
-        let sender = iota::tx_context::sender(ctx);
-        transfer::transfer(device, sender);
-        transfer::transfer(registry, sender);
-        test_scenario::end(scenario);
-    }
-
-    #[test]
-    #[expected_failure(abort_code = anti_theft_gps_tracker::ALREADY_STOLEN)]
-    fun test_double_theft_report() {
-        let mut scenario = test_scenario::begin(@0x1);
-        let ctx = test_scenario::ctx(&mut scenario);
-        
-        let mut registry = anti_theft_gps_tracker::Registry {
-            id: iota::object::new(ctx),
-            total_devices: 0,
-            total_assets: 0,
+        // 2. User tạo thiết bị
+        test_scenario::next_tx(&mut scenario, user);
+        {
+            let mut registry = test_scenario::take_shared<Registry>(&scenario);
+            let ctx = test_scenario::ctx(&mut scenario);
+            anti_theft_gps_tracker::create_device(string::utf8(b"GPS"), 1000, &mut registry, ctx);
+            test_scenario::return_shared(registry);
         };
 
-        let device = anti_theft_gps_tracker::create_device(
-            string::utf8(b"GPS Device"),
-            1000,
-            &mut registry,
-            ctx,
-        );
+        // 3. Attacker cố gắng đăng ký tài sản vào thiết bị của User
+        test_scenario::next_tx(&mut scenario, attacker); 
+        {
+             // Lấy thiết bị từ kho chứa của User để làm tham số test (không cần transfer)
+             let device = test_scenario::take_from_address<GPSDevice>(&scenario, user);
+             let mut registry = test_scenario::take_shared<Registry>(&scenario);
+             let ctx = test_scenario::ctx(&mut scenario);
 
-        let mut asset = anti_theft_gps_tracker::register_asset(
-            string::utf8(b"My Phone"),
-            string::utf8(b"iPhone 15"),
-            &device,
-            &mut registry,
-            ctx,
-        );
+             // Hàm này sẽ thất bại (ABORT) tại đây vì:
+             // sender (attacker) != device.owner (user)
+             anti_theft_gps_tracker::register_asset(
+                string::utf8(b"Stolen Asset"),
+                string::utf8(b"Desc"),
+                &device,
+                &mut registry,
+                ctx
+             );
 
-        anti_theft_gps_tracker::report_theft(&mut asset, &device, ctx);
-        // This should fail - can't report theft twice
-        anti_theft_gps_tracker::report_theft(&mut asset, &device, ctx);
+             // Các dòng dưới này sẽ không chạy được do hàm trên đã abort, 
+             // nhưng cần thiết để trình biên dịch không báo lỗi unused variables
+             test_scenario::return_shared(registry);
+             test_scenario::return_to_address(user, device);
+        };
 
-        let sender = iota::tx_context::sender(ctx);
-        transfer::transfer(device, sender);
-        transfer::transfer(asset, sender);
-        transfer::transfer(registry, sender);
         test_scenario::end(scenario);
     }
 }
