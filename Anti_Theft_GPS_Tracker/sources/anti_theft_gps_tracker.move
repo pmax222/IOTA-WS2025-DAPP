@@ -12,8 +12,8 @@
 /// https://docs.iota.org/developer/iota-101/move-overview/conventions
 
 module anti_theft_gps_tracker::anti_theft_gps_tracker {
-    use iota::object::{UID};
-    use iota::tx_context::{TxContext};
+    use iota::object::UID;
+    use iota::tx_context::TxContext;
     use iota::transfer;
     use iota::event;
     use std::string::String;

@@ -2,6 +2,7 @@
 module anti_theft_gps_tracker::anti_theft_gps_tracker_tests {
     use anti_theft_gps_tracker::anti_theft_gps_tracker;
     use iota::test_scenario;
+    use iota::transfer;
     use std::string;
 
     #[test]
@@ -25,6 +26,9 @@ module anti_theft_gps_tracker::anti_theft_gps_tracker_tests {
         assert!(anti_theft_gps_tracker::is_device_active(&device), 0);
         assert!(anti_theft_gps_tracker::device_name(&device) == string::utf8(b"GPS Device 1"), 1);
 
+        let sender = iota::tx_context::sender(ctx);
+        transfer::transfer(device, sender);
+        transfer::transfer(registry, sender);
         test_scenario::end(scenario);
     }
 
@@ -57,6 +61,10 @@ module anti_theft_gps_tracker::anti_theft_gps_tracker_tests {
         assert!(!anti_theft_gps_tracker::is_asset_stolen(&asset), 0);
         assert!(anti_theft_gps_tracker::asset_name(&asset) == string::utf8(b"My Car"), 1);
 
+        let sender = iota::tx_context::sender(ctx);
+        transfer::transfer(device, sender);
+        transfer::transfer(asset, sender);
+        transfer::transfer(registry, sender);
         test_scenario::end(scenario);
     }
 
@@ -84,6 +92,9 @@ module anti_theft_gps_tracker::anti_theft_gps_tracker_tests {
         assert!(latitude == 4000, 0);
         assert!(longitude == 5000, 1);
 
+        let sender = iota::tx_context::sender(ctx);
+        transfer::transfer(device, sender);
+        transfer::transfer(registry, sender);
         test_scenario::end(scenario);
     }
 
@@ -119,6 +130,10 @@ module anti_theft_gps_tracker::anti_theft_gps_tracker_tests {
 
         assert!(anti_theft_gps_tracker::is_asset_stolen(&asset), 1);
 
+        let sender = iota::tx_context::sender(ctx);
+        transfer::transfer(device, sender);
+        transfer::transfer(asset, sender);
+        transfer::transfer(registry, sender);
         test_scenario::end(scenario);
     }
 
@@ -154,6 +169,10 @@ module anti_theft_gps_tracker::anti_theft_gps_tracker_tests {
         anti_theft_gps_tracker::recover_asset(&mut asset, ctx);
         assert!(!anti_theft_gps_tracker::is_asset_stolen(&asset), 1);
 
+        let sender = iota::tx_context::sender(ctx);
+        transfer::transfer(device, sender);
+        transfer::transfer(asset, sender);
+        transfer::transfer(registry, sender);
         test_scenario::end(scenario);
     }
 
@@ -183,6 +202,9 @@ module anti_theft_gps_tracker::anti_theft_gps_tracker_tests {
         anti_theft_gps_tracker::activate_device(&mut device, ctx);
         assert!(anti_theft_gps_tracker::is_device_active(&device), 2);
 
+        let sender = iota::tx_context::sender(ctx);
+        transfer::transfer(device, sender);
+        transfer::transfer(registry, sender);
         test_scenario::end(scenario);
     }
 
@@ -218,6 +240,9 @@ module anti_theft_gps_tracker::anti_theft_gps_tracker_tests {
         );
         let _ = _asset;
 
+        let sender = iota::tx_context::sender(ctx);
+        transfer::transfer(device, sender);
+        transfer::transfer(registry, sender);
         test_scenario::end(scenario);
     }
 
@@ -252,6 +277,10 @@ module anti_theft_gps_tracker::anti_theft_gps_tracker_tests {
         // This should fail - can't report theft twice
         anti_theft_gps_tracker::report_theft(&mut asset, &device, ctx);
 
+        let sender = iota::tx_context::sender(ctx);
+        transfer::transfer(device, sender);
+        transfer::transfer(asset, sender);
+        transfer::transfer(registry, sender);
         test_scenario::end(scenario);
     }
 }
