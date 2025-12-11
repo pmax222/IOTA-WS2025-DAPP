@@ -69,72 +69,104 @@ iota client publish --gas-budget 100000000
 
 **⚠️ Important:** After deployment, save the **Package ID** and the **Registry ID** (Shared Object) from the output log. You will need these for the frontend.
 
-### 2\. Frontend Setup
+## 🖥 **Frontend Setup (Next.js + dApp Kit)**
 
-Navigate to the frontend directory:
+Go to the frontend directory:
 
 ```bash
 cd frontend
 ```
 
-**Install Dependencies:**
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-**Configuration:**
-Open `src/CreateDevice.tsx` (or your config file) and update the constants with your deployed IDs:
+Set your contract IDs in:
 
-```typescript
-const PACKAGE_ID = "0x..."; // Your Package ID
-const REGISTRY_ID = "0x..."; // Your Registry ID (Shared Object)
+```
+src/lib/moveConfig.ts
 ```
 
-**Run the Application:**
+Example:
+
+```ts
+export const PACKAGE_ID = "0x...";
+export const REGISTRY_ID = "0x...";
+export const MODULE_NAME = "anti_theft_gps_tracker";
+```
+
+Run the local development server:
 
 ```bash
 npm run dev
 ```
 
-Open your browser at `http://localhost:5173`.
+Open:
 
------
+```
+http://localhost:3000
+```
 
-## 🚀 Usage Guide
+---
 
-1.  **Connect Wallet:**
+## 🎮 **Usage**
 
-      * Open the web app.
-      * Click the **"Connect Wallet"** button in the top right corner.
-      * Approve the connection in your IOTA Wallet extension.
+### 1. Connect Wallet
 
-2.  **Create a Device:**
+Click **Connect Wallet** and allow the connection in your IOTA Wallet extension.
 
-      * Enter a **Device Name** (e.g., "My Car Tracker").
-      * Set an **Alert Threshold** (e.g., 500 meters).
-      * Click **"Create Device"** and approve the transaction in your wallet.
+### 2. Create Device
 
-3.  **View & Manage:**
+Enter:
 
-      * Once the transaction is confirmed, the device is created on-chain.
-      * You can extend the frontend to view your list of devices and register assets to them.
+* Device name
+* Threshold (meters)
+
+Click **Create Device**, approve transaction.
+
+### 3. Update Threshold
+
+Enter:
+
+* Device Object ID
+* New threshold
+
+Click **Update Threshold**.
+
+### 4. Send GPS Event
+
+Enter:
+
+* Device Object ID
+* Latitude
+* Longitude
+
+Click **Send Event**.
+
 
 ## 📂 Project Structure
 
 ```
 IOTA-WS2025-DAPP/
-├── Anti_Theft_GPS_Tracker/      # Move Smart Contracts
-│   ├── sources/                 # Source code (.move files)
-│   ├── tests/                   # Unit tests
-│   └── Move.toml                # Manifest file
-└── frontend/                    # React Web Application
-    ├── src/                     # React components
-    ├── package.json             # Frontend dependencies
-    └── vite.config.ts           # Vite configuration
+├── Anti_Theft_GPS_Tracker/     # Move smart contract
+│   ├── sources/
+│   ├── tests/
+│   └── Move.toml
+└── frontend/                    # React dApp (Next.js + dApp Kit)
+    ├── src/
+    │   ├── app/
+    │   ├── components/
+    │   ├── providers/
+    │   └── lib/
+    ├── package.json
+    └── tailwind.config.js
 ```
+
 
 ## 📜 License
 
 This project is licensed under the MIT License.
+
 
